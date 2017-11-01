@@ -1,0 +1,19 @@
+﻿多语言		中文		备注		英文		韩文		日文		西班牙语		俄语
+text_language		语言				Language		언어		言語		Idioma		Язык
+text_forget_password		忘记密码?				Forget password?		비밀번호를 잊어버렸나요?		パスワードを忘れた?		Olvidar contraseña?		Забыть пароль?
+action_sign_in		登录				Log in		로그인		ログイン		Iniciar sesión		Вход
+action_create_new_account		创建新帐号				Create new account		계정 만들기		新しいアカウントを作成		Crear nueva cuenta		Создать новую учетную запись
+text_more		更多				More		더 보기		もっと		Más		Больше
+text_remember_password		记住密码				Remember password		비밀번호 저장		パスワードを記憶		Recordar contraseña		Запомнить пароль
+text_automatic_login		自动登录				Log in automatically		자동 로그인		自動的にログイン		Iniciar sesión automáticamente		Автозапуск
+text_retrieve_password		找回密码				Find password		비밀번호 찾기		パスワードを探す		Encontrar contraseña		Восстановление пароля
+msg_cloud_account		云帐号				Cloud account		클라우드 계정		クラウドアカウント		Cuenta de Cloud		Облачная учетная запись
+msg_local_account		本地帐号				Local account		로컬 계정		ローカルアカウント		Cuenta local		Местная учетная запись
+hint_password		密码				Password		비밀번호		パスワード		Contraseña		Пароль
+text_account_inexistence		账号不存在				Account does't exist		입력하신 아이디가 존재하지 않습니다.		存在しないアカウント		Cuenta no existe		Учетная запись не существует.
+text_create_account		创建帐号				Create account		새로 만들기		アカウントを作成		Crear cuenta		Создать учетную запись
+text_account_name		帐户名				Account name		계정		アカウント名		Nombre de cuenta		Логин
+text_enter_password		输入密码				Enter password		비밀번호 입력		パスワードを入力		Entrar contraseña		Пароль
+text_enter_password_again		确认密码				Enter password again		비밀번호 재입력		パスワードを確認		Entrar contraseña de nuevo		Повторите пароль
+action_ok		确认				OK		확인		確認		OK		OK
+action_register		注册				Register		계정 만들기		登録する		Registrar		Регистрация
