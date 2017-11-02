@@ -10,8 +10,10 @@ import codecs
 import shutil
 from xml.dom.minidom import Document
 
-ITEM_SEPARATOR = "\t\t" # 列表间的分隔符
+ITEM_SEPARATOR = "\t"  # 列表间的分隔符
 TEXT_FILE_DIR_PREFIX = "values-"
+
+
 class unicodetxt_to_formattxt_obj:
     # 初始化
     def __init__(self):
@@ -212,6 +214,7 @@ class TkFileDialogExample(Tkinter.Frame):
             obj.parse_txt_file(filename)
             form = self.formatChosen.get()  # 生成的文件格式
             obj.build_translated_file(form)
+
 
 if __name__ == '__main__':
     root = Tkinter.Tk()
