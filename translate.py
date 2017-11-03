@@ -11,7 +11,8 @@ import shutil
 from xml.dom.minidom import Document
 
 ITEM_SEPARATOR = "\t"  # 列表间的分隔符
-TEXT_FILE_DIR_PREFIX = "values-"
+FILE_DIR_ANDROID = "Android"
+FILE_DIR_IOS = "iOS"
 
 
 class unicodetxt_to_formattxt_obj:
@@ -146,13 +147,26 @@ class unicodetxt_to_formattxt_obj:
 
     # 按语言分别生成对应的翻译文本
     def build_translated_file(self, form="xml"):
-        cwd = os.path.dirname(sys.argv[0])
-        lsdir = os.listdir('.')
+        # 获取当前路径
+        dir = os.path.split(os.path.realpath(__file__))[0]
+        # 建立父文件夹,并切换到该目录下
+        if form == "xml":
+            dir_path = os.path.join(dir, FILE_DIR_ANDROID)
+        else:
+            dir_path = os.path.join(dir, FILE_DIR_IOS)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        os.chdir(dir_path)
 
-        # 移除"values-"开头的目录及文件,防止重复写入
+        # 移除子目录下所有的文件, 防止写入时发生冲突
+        lsdir = os.listdir('.')
+        print(lsdir)
         for i in lsdir:
-            if i.startswith(TEXT_FILE_DIR_PREFIX):
+            try:
+                # 删除时进行异常处理，防止崩溃（Mac下会自动生成.DS_Store文件）
                 shutil.rmtree(i)
+            except Exception as e:
+                print(e)
 
         # 生成对应语言的文本
         for lang in self.langls:
@@ -160,21 +174,22 @@ class unicodetxt_to_formattxt_obj:
             if form == "xml":
                 # text = self.generate_xml(lang)
                 text = self.generate_xml_without(lang)
+                dir_name = "values-" + lang
+                file = "strings.xml"
             else:
                 text = self.generate_txt(lang)
-                form = "txt"
+                dir_name = lang + ".lproj"
+                file = "Localizable.strings"
 
             # 根据语言,建立相应的文件夹目录
-            dir_name = TEXT_FILE_DIR_PREFIX + lang
             os.mkdir(dir_name)
 
             # 新建文本,并将数据写入
-            file = "strings." + form
             self.txtfd = open(os.path.join(dir_name, file), 'w')
             self.txtfd.write(text)
             self.txtfd.close()
 
-
+# 选择文件的图形界面
 class TkFileDialogExample(Tkinter.Frame):
     def __init__(self, root):
         Tkinter.Frame.__init__(self, root)
@@ -204,7 +219,7 @@ class TkFileDialogExample(Tkinter.Frame):
         options['initialdir'] = 'C:\\'
         options['initialfile'] = 'example.txt'
         options['parent'] = root
-        options['title'] = '选择一个翻译文档'
+        options['title'] = '请选择翻译文档'
 
     def select_file(self):
         # 获取文件路径
