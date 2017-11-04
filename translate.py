@@ -8,11 +8,13 @@ import os
 import re
 import codecs
 import shutil
+import tkMessageBox
+from Tkinter import *
 from xml.dom.minidom import Document
 
 ITEM_SEPARATOR = "\t"  # 列表间的分隔符
-FILE_DIR_ANDROID = "Android"
-FILE_DIR_IOS = "iOS"
+OUTPUT_FORMAT_ANDROID = "Android"
+OUTPUT_FORMAT_IOS = "iOS"
 
 
 class unicodetxt_to_formattxt_obj:
@@ -146,14 +148,14 @@ class unicodetxt_to_formattxt_obj:
         return text
 
     # 按语言分别生成对应的翻译文本
-    def build_translated_file(self, form="xml"):
+    def build_translated_file(self, form):
         # 获取当前路径
         dir = os.path.split(os.path.realpath(__file__))[0]
         # 建立父文件夹,并切换到该目录下
-        if form == "xml":
-            dir_path = os.path.join(dir, FILE_DIR_ANDROID)
+        if form == OUTPUT_FORMAT_ANDROID:
+            dir_path = os.path.join(dir, OUTPUT_FORMAT_ANDROID)
         else:
-            dir_path = os.path.join(dir, FILE_DIR_IOS)
+            dir_path = os.path.join(dir, OUTPUT_FORMAT_IOS)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         os.chdir(dir_path)
@@ -171,7 +173,7 @@ class unicodetxt_to_formattxt_obj:
         # 生成对应语言的文本
         for lang in self.langls:
             # # 生成根据后缀名生成相应格式的文本
-            if form == "xml":
+            if form == OUTPUT_FORMAT_ANDROID:
                 # text = self.generate_xml(lang)
                 text = self.generate_xml_without(lang)
                 dir_name = "values-" + lang
@@ -182,36 +184,20 @@ class unicodetxt_to_formattxt_obj:
                 file = "Localizable.strings"
 
             # 根据语言,建立相应的文件夹目录
-            os.mkdir(dir_name)
+            if not os.path.exists(dir_name):
+                os.mkdir(dir_name)
 
             # 新建文本,并将数据写入
             self.txtfd = open(os.path.join(dir_name, file), 'w')
             self.txtfd.write(text)
             self.txtfd.close()
 
+
 # 选择文件的图形界面
 class TkFileDialogExample(Tkinter.Frame):
     def __init__(self, root):
-        Tkinter.Frame.__init__(self, root)
-
-        # 添加标题
-        root.title("多语言翻译自动生成器")
-
-        # 下拉选择框
-        lable = ttk.Label(root, text="请选择输出格式:")
-        lable.pack()  # pack()方法把Widget加入到父容器中，并实现布局
-
-        variable = Tkinter.StringVar(root)
-        formatChosen = ttk.Combobox(root, textvariable=variable, state='readonly')
-        formatChosen['values'] = ("xml", "txt")  # 设置下拉列表的值
-        formatChosen.current(0)  # 设置下拉列表默认显示的值，0为 numberChosen['values'] 的下标值
-        formatChosen.pack()
-        self.formatChosen = formatChosen
-
-        # 创建按钮(text：显示按钮上面显示的文字, command：当这个按钮被点击之后会调用command函数)
-        button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
-        Tkinter.Button(self, text='选择源文件', command=self.select_file).pack(**button_opt)
-
+        # 文件路径
+        self.file_path = ""
         # 定义文件操作的相关属性
         self.file_opt = options = {}
         options['defaultextension'] = '.txt'
@@ -220,15 +206,62 @@ class TkFileDialogExample(Tkinter.Frame):
         options['initialfile'] = 'example.txt'
         options['parent'] = root
         options['title'] = '请选择翻译文档'
+        # 路径文本
+        self.path_text = StringVar()
 
+        # 初始化窗口
+        Tkinter.Frame.__init__(self, root)
+        root.title("多语言翻译自动生成器")
+
+        # 添加一个label、entry、button到frame中
+        fileFrame = Frame(root)
+        fileFrame.pack()
+        label = Label(fileFrame, text="path:")
+        tvPath = Entry(fileFrame, textvariable=self.path_text)
+        btnGetPath = Button(fileFrame, text="select", command=self.select_file)
+        label.grid(row=1, column=1)
+        tvPath.grid(row=1, column=2)
+        btnGetPath.grid(row=1, column=3)
+
+        # 添加一个多选按钮和单选按钮到frame1
+        frame1 = Frame(root)
+        frame1.pack()  # 看下面的解释（包管理器）
+        self.v1 = IntVar()
+        self.v2 = IntVar()
+        self.v1.set(1)
+        self.v2.set(1)
+        tvOutput = Label(frame1, text="Output Format：")
+        cbAndroid = Checkbutton(frame1, text=OUTPUT_FORMAT_ANDROID, variable=self.v1)
+        cbIOS = Checkbutton(frame1, text=OUTPUT_FORMAT_IOS, variable=self.v2)
+        # 将cbtBold排列在frame1的网格第一行第一列（网格管理器也会在下面有解释）
+        tvOutput.grid(row=1, column=1)
+        cbAndroid.grid(row=1, column=2)
+        cbIOS.grid(row=1, column=3)
+
+
+        # 创建按钮(text：显示按钮上面显示的文字, command：当这个按钮被点击之后会调用command函数)
+        button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
+        Tkinter.Button(self, text='开始转换', command=self.begin_transform).pack(**button_opt)
+
+    # 获取文件路径
     def select_file(self):
-        # 获取文件路径
-        filename = tkFileDialog.askopenfilename(**self.file_opt)
-        if filename:
+        self.file_path = tkFileDialog.askopenfilename(**self.file_opt)
+        self.path_text.set(self.file_path)
+
+    # 开始转换
+    def begin_transform(self):
+        if self.file_path:
             obj = unicodetxt_to_formattxt_obj()
-            obj.parse_txt_file(filename)
-            form = self.formatChosen.get()  # 生成的文件格式
-            obj.build_translated_file(form)
+            obj.parse_txt_file(self.file_path)
+            # 根据选择的格式进行输出
+            if self.v1.get() == 1:
+                obj.build_translated_file(OUTPUT_FORMAT_ANDROID)
+            if self.v2.get() == 1:
+                obj.build_translated_file(OUTPUT_FORMAT_IOS)
+        else:
+            title = "提示"
+            tips_string = "文件路径不能为空"
+            tkMessageBox.showwarning(title=title, message=tips_string)
 
 
 if __name__ == '__main__':
