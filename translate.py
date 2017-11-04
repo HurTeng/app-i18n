@@ -211,7 +211,7 @@ class TkFileDialogExample(Tkinter.Frame):
 
         # 初始化窗口
         Tkinter.Frame.__init__(self, root)
-        root.title("多语言翻译自动生成器")
+        root.title("Multinational Translation Generator")
 
         # 添加一个label、entry、button到frame中
         fileFrame = Frame(root)
@@ -241,7 +241,7 @@ class TkFileDialogExample(Tkinter.Frame):
 
         # 创建按钮(text：显示按钮上面显示的文字, command：当这个按钮被点击之后会调用command函数)
         button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
-        Tkinter.Button(self, text='开始转换', command=self.begin_transform).pack(**button_opt)
+        Tkinter.Button(self, text='Start', command=self.begin_transform).pack(**button_opt)
 
     # 获取文件路径
     def select_file(self):
