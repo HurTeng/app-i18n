@@ -12,19 +12,15 @@ import tkMessageBox
 from Tkinter import *
 from xml.dom.minidom import Document
 
+FILE_CODING = "utf-8"  # 翻译文本编码格式(默认UTF-8)
 ITEM_SEPARATOR = "\t"  # 列表间的分隔符
-OUTPUT_FORMAT_ANDROID = "Android"
 OUTPUT_FORMAT_IOS = "iOS"
+OUTPUT_FORMAT_ANDROID = "Android"
 
 
 class unicodetxt_to_formattxt_obj:
     # 初始化
     def __init__(self):
-        # if len(sys.argv) != 2:
-        #     print 'usage: ./txt2xml.py file'
-        #     sys.exit(1)
-
-        self.txtfd = 0  # 文本
         self.langls = []  # 语言的list
         self.infols = []  # 信息的list
 
@@ -32,10 +28,10 @@ class unicodetxt_to_formattxt_obj:
     def parse_txt_file(self, txt_fname):
         # 读取文本信息
         cwd = os.path.dirname(sys.argv[0])
-        self.txt_fd = codecs.open(os.path.join(cwd, txt_fname), 'r', 'utf-8')
+        self.txt_fd = codecs.open(os.path.join(cwd, txt_fname), 'r', FILE_CODING)
 
         # 读取每一行的数据
-        ls = [line.strip().encode('utf-8') for line in self.txt_fd]
+        ls = [line.strip().encode(FILE_CODING) for line in self.txt_fd]
         self.txt_fd.close()
 
         # 对第一行的数据进行划分,获取语言列表
@@ -102,7 +98,7 @@ class unicodetxt_to_formattxt_obj:
         return prettyXml
 
     # 拼接字符生成xml文本(Android)
-    def generate_xml_without(self, lang):
+    def generate_xml(self, lang):
         stringls = []
         # 对应的语言索引位置
         langls_index = self.langls.index(lang)
@@ -162,7 +158,6 @@ class unicodetxt_to_formattxt_obj:
 
         # 移除子目录下所有的文件, 防止写入时发生冲突
         lsdir = os.listdir('.')
-        print(lsdir)
         for i in lsdir:
             try:
                 # 删除时进行异常处理，防止崩溃（Mac下会自动生成.DS_Store文件）
@@ -174,8 +169,7 @@ class unicodetxt_to_formattxt_obj:
         for lang in self.langls:
             # # 生成根据后缀名生成相应格式的文本
             if form == OUTPUT_FORMAT_ANDROID:
-                # text = self.generate_xml(lang)
-                text = self.generate_xml_without(lang)
+                text = self.generate_xml(lang)
                 dir_name = "values-" + lang
                 file = "strings.xml"
             else:
@@ -188,26 +182,24 @@ class unicodetxt_to_formattxt_obj:
                 os.mkdir(dir_name)
 
             # 新建文本,并将数据写入
-            self.txtfd = open(os.path.join(dir_name, file), 'w')
-            self.txtfd.write(text)
-            self.txtfd.close()
+            txtfd = open(os.path.join(dir_name, file), 'w')
+            txtfd.write(text)
+            txtfd.close()
 
 
 # 选择文件的图形界面
 class TkFileDialogExample(Tkinter.Frame):
     def __init__(self, root):
-        # 文件路径
-        self.file_path = ""
+        self.file_path = ""  # 文件路径
+        self.path_text = StringVar()  # 路径显示文本
         # 定义文件操作的相关属性
         self.file_opt = options = {}
-        options['defaultextension'] = '.txt'
-        options['filetypes'] = [('all files', '.*'), ('text files', '.txt')]
-        options['initialdir'] = 'C:\\'
-        options['initialfile'] = 'example.txt'
         options['parent'] = root
-        options['title'] = '请选择翻译文档'
-        # 路径文本
-        self.path_text = StringVar()
+        options['defaultextension'] = '.txt'  # 限制只能选择txt文本
+        options['filetypes'] = [('all files', '.*'), ('text files', '.txt')]  # 文本选择类型
+        options['initialdir'] = '.'  # 默认当前目录
+        options['initialfile'] = 'example.txt'  # 默认选中的文件
+        options['title'] = 'Please select a document'
 
         # 初始化窗口
         Tkinter.Frame.__init__(self, root)
@@ -226,18 +218,17 @@ class TkFileDialogExample(Tkinter.Frame):
         # 添加一个多选按钮和单选按钮到frame1
         frame1 = Frame(root)
         frame1.pack()  # 看下面的解释（包管理器）
-        self.v1 = IntVar()
-        self.v2 = IntVar()
-        self.v1.set(1)
-        self.v2.set(1)
+        self.value_ios = IntVar()
+        self.value_android = IntVar()
+        self.value_ios.set(1)
+        self.value_android.set(1)
         tvOutput = Label(frame1, text="Output Format：")
-        cbAndroid = Checkbutton(frame1, text=OUTPUT_FORMAT_ANDROID, variable=self.v1)
-        cbIOS = Checkbutton(frame1, text=OUTPUT_FORMAT_IOS, variable=self.v2)
+        cbIOS = Checkbutton(frame1, text=OUTPUT_FORMAT_IOS, variable=self.value_ios)
+        cbAndroid = Checkbutton(frame1, text=OUTPUT_FORMAT_ANDROID, variable=self.value_android)
         # 将cbtBold排列在frame1的网格第一行第一列（网格管理器也会在下面有解释）
         tvOutput.grid(row=1, column=1)
-        cbAndroid.grid(row=1, column=2)
-        cbIOS.grid(row=1, column=3)
-
+        cbIOS.grid(row=1, column=2)
+        cbAndroid.grid(row=1, column=3)
 
         # 创建按钮(text：显示按钮上面显示的文字, command：当这个按钮被点击之后会调用command函数)
         button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
@@ -251,17 +242,26 @@ class TkFileDialogExample(Tkinter.Frame):
     # 开始转换
     def begin_transform(self):
         if self.file_path:
-            obj = unicodetxt_to_formattxt_obj()
-            obj.parse_txt_file(self.file_path)
-            # 根据选择的格式进行输出
-            if self.v1.get() == 1:
-                obj.build_translated_file(OUTPUT_FORMAT_ANDROID)
-            if self.v2.get() == 1:
-                obj.build_translated_file(OUTPUT_FORMAT_IOS)
+            opt_ios = self.value_ios.get() == 1
+            opt_android = self.value_android.get() == 1
+            if opt_ios or opt_android:
+                obj = unicodetxt_to_formattxt_obj()
+                obj.parse_txt_file(self.file_path)
+                # 根据选择的格式进行输出
+                if opt_ios:
+                    obj.build_translated_file(OUTPUT_FORMAT_IOS)
+                    print("iOS Finish")
+                if opt_android:
+                    obj.build_translated_file(OUTPUT_FORMAT_ANDROID)
+                    print("Android Finish")
+                # 完成提示
+                title = "Message"
+                tips_string = "Translation Done"
+                tkMessageBox.showinfo(title=title, message=tips_string)
         else:
-            title = "提示"
-            tips_string = "文件路径不能为空"
-            tkMessageBox.showwarning(title=title, message=tips_string)
+            title = "Error"
+            tips_string = "The file path cannot be empty"
+            tkMessageBox.showerror(title=title, message=tips_string)
 
 
 if __name__ == '__main__':
