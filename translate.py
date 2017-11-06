@@ -1,16 +1,12 @@
 # coding=UTF-8
 
-import Tkinter, Tkconstants, tkFileDialog
-import ttk
-
-import sys
 import os
-import re
 import codecs
 import shutil
 import tkMessageBox
+import Tkinter
+import tkFileDialog
 from Tkinter import *
-from xml.dom.minidom import Document
 
 FILE_CODING = "utf-8"  # 翻译文本编码格式(默认UTF-8)
 ITEM_SEPARATOR = "\t"  # 列表间的分隔符
@@ -18,21 +14,21 @@ OUTPUT_FORMAT_IOS = "iOS"
 OUTPUT_FORMAT_ANDROID = "Android"
 
 
-class unicodetxt_to_formattxt_obj:
+class I18NTranslator:
     # 初始化
     def __init__(self):
         self.langls = []  # 语言的list
         self.infols = []  # 信息的list
+        self.cur_dir = os.path.split(os.path.realpath(__file__))[0]  # 脚本当前的路径       
 
     # 解析txt文本
     def parse_txt_file(self, txt_fname):
         # 读取文本信息
         cwd = os.path.dirname(sys.argv[0])
-        self.txt_fd = codecs.open(os.path.join(cwd, txt_fname), 'r', FILE_CODING)
-
+        txt_fd = codecs.open(os.path.join(cwd, txt_fname), 'r', FILE_CODING)
         # 读取每一行的数据
-        ls = [line.strip().encode(FILE_CODING) for line in self.txt_fd]
-        self.txt_fd.close()
+        ls = [line.strip().encode(FILE_CODING) for line in txt_fd]
+        txt_fd.close()
 
         # 对第一行的数据进行划分,获取语言列表
         self.langls = ls[0].split(ITEM_SEPARATOR)[1:]
@@ -62,40 +58,6 @@ class unicodetxt_to_formattxt_obj:
                 self.infols.append({"key": subls[0], "value": subls[1:]})
             else:
                 null_ls.append({"key": subls[0], "value": subls[1:]})
-
-                # for i in null_ls:
-                #     self.infols.append(i)
-
-    # 使用库生成xml文本(Android)
-    def generate_xml_with_lib(self, lang):
-        # 新建xml文档
-        doc = Document()
-        resources = doc.createElement("resources")
-        doc.appendChild(resources)
-
-        # 对应的语言索引位置
-        langls_index = self.langls.index(lang)
-        for info in self.infols:
-            key = info["key"]
-            try:
-                value = info["value"][langls_index]
-                # Android的单引号需要转义处理
-                if "\'" in value:
-                    value = value.replace("\'", "\\\'")
-            except IndexError:  # 防止空列越界
-                value = ""
-
-            stringele = doc.createElement("string")  # 添加元素
-            stringele.setAttribute("name", key)  # 添加并设置属性
-            text_node = doc.createTextNode(value)  # 生成节点字符串
-            stringele.appendChild(text_node)  # 添加文本节点
-            resources.appendChild(stringele)  # 在xml中添加此行数据
-
-        # 拼接字符串
-        uglyXml = doc.toprettyxml(indent='  ')
-        text_re = re.compile('>\n\s+([^<>\s].*?)\n\s+</', re.DOTALL)
-        prettyXml = text_re.sub('>\g<1></', uglyXml)
-        return prettyXml
 
     # 拼接字符生成xml文本(Android)
     def generate_xml(self, lang):
@@ -145,13 +107,13 @@ class unicodetxt_to_formattxt_obj:
 
     # 按语言分别生成对应的翻译文本
     def build_translated_file(self, form):
-        # 获取当前路径
-        dir = os.path.split(os.path.realpath(__file__))[0]
+        # 切换到脚本的路径
+        os.chdir(self.cur_dir)        
         # 建立父文件夹,并切换到该目录下
         if form == OUTPUT_FORMAT_ANDROID:
-            dir_path = os.path.join(dir, OUTPUT_FORMAT_ANDROID)
+            dir_path = os.path.join(self.cur_dir, OUTPUT_FORMAT_ANDROID)
         else:
-            dir_path = os.path.join(dir, OUTPUT_FORMAT_IOS)
+            dir_path = os.path.join(self.cur_dir, OUTPUT_FORMAT_IOS)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         os.chdir(dir_path)
@@ -188,7 +150,7 @@ class unicodetxt_to_formattxt_obj:
 
 
 # 选择文件的图形界面
-class TkFileDialogExample(Tkinter.Frame):
+class SelectFileDialog(Tkinter.Frame):
     def __init__(self, root):
         self.file_path = ""  # 文件路径
         self.path_text = StringVar()  # 路径显示文本
@@ -205,7 +167,7 @@ class TkFileDialogExample(Tkinter.Frame):
         Tkinter.Frame.__init__(self, root)
         root.title("Multinational Translation Generator")
 
-        # 添加一个label、entry、button到frame中
+        # 添加一个label、entry、button到fileFrame中
         fileFrame = Frame(root)
         fileFrame.pack()
         label = Label(fileFrame, text="path:")
@@ -215,24 +177,23 @@ class TkFileDialogExample(Tkinter.Frame):
         tvPath.grid(row=1, column=2)
         btnGetPath.grid(row=1, column=3)
 
-        # 添加一个多选按钮和单选按钮到frame1
-        frame1 = Frame(root)
-        frame1.pack()  # 看下面的解释（包管理器）
+        # 添加两个多选按钮到formatFrame
+        formatFrame = Frame(root)
+        formatFrame.pack()
         self.value_ios = IntVar()
         self.value_android = IntVar()
         self.value_ios.set(1)
         self.value_android.set(1)
-        tvOutput = Label(frame1, text="Output Format：")
-        cbIOS = Checkbutton(frame1, text=OUTPUT_FORMAT_IOS, variable=self.value_ios)
-        cbAndroid = Checkbutton(frame1, text=OUTPUT_FORMAT_ANDROID, variable=self.value_android)
-        # 将cbtBold排列在frame1的网格第一行第一列（网格管理器也会在下面有解释）
+        tvOutput = Label(formatFrame, text="Output Format：")
+        cbIOS = Checkbutton(formatFrame, text=OUTPUT_FORMAT_IOS, variable=self.value_ios)
+        cbAndroid = Checkbutton(formatFrame, text=OUTPUT_FORMAT_ANDROID, variable=self.value_android)
+        # 使用网格管理器排列按钮
         tvOutput.grid(row=1, column=1)
         cbIOS.grid(row=1, column=2)
         cbAndroid.grid(row=1, column=3)
 
-        # 创建按钮(text：显示按钮上面显示的文字, command：当这个按钮被点击之后会调用command函数)
-        button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
-        Tkinter.Button(self, text='Start', command=self.begin_transform).pack(**button_opt)
+        # 创建Start按钮
+        Tkinter.Button(self, text='Start', command=self.begin_transform).pack()
 
     # 获取文件路径
     def select_file(self):
@@ -245,14 +206,14 @@ class TkFileDialogExample(Tkinter.Frame):
             opt_ios = self.value_ios.get() == 1
             opt_android = self.value_android.get() == 1
             if opt_ios or opt_android:
-                obj = unicodetxt_to_formattxt_obj()
-                obj.parse_txt_file(self.file_path)
+                translator = I18NTranslator()
+                translator.parse_txt_file(self.file_path)
                 # 根据选择的格式进行输出
                 if opt_ios:
-                    obj.build_translated_file(OUTPUT_FORMAT_IOS)
+                    translator.build_translated_file(OUTPUT_FORMAT_IOS)
                     print("iOS Finish")
                 if opt_android:
-                    obj.build_translated_file(OUTPUT_FORMAT_ANDROID)
+                    translator.build_translated_file(OUTPUT_FORMAT_ANDROID)
                     print("Android Finish")
                 # 完成提示
                 title = "Message"
@@ -266,5 +227,5 @@ class TkFileDialogExample(Tkinter.Frame):
 
 if __name__ == '__main__':
     root = Tkinter.Tk()
-    TkFileDialogExample(root).pack()
+    SelectFileDialog(root).pack()
     root.mainloop()
