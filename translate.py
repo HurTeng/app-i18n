@@ -7,6 +7,9 @@ import tkMessageBox
 import Tkinter
 import tkFileDialog
 from Tkinter import *
+import xlrd
+from openpyxl import load_workbook
+
 
 FILE_CODING = "utf-8"  # 翻译文本编码格式(默认UTF-8)
 ITEM_SEPARATOR = "\t"  # 列表间的分隔符
@@ -32,7 +35,86 @@ class I18NTranslator:
 
         # 对第一行的数据进行划分,获取语言列表
         self.langls = ls[0].split(ITEM_SEPARATOR)[1:]
+        # 修改语言描述
+        self.edit_language_desc()
 
+        null_ls = []
+        # 对每一行的数据进行分割,将数据存入list(第一列为键,其他列为值)
+        for i in ls[1:]:
+            subls = i.split(ITEM_SEPARATOR)
+            if subls[0] != "-":
+                self.infols.append({"key": subls[0], "value": subls[1:]})
+            else:
+                null_ls.append({"key": subls[0], "value": subls[1:]})
+
+    # 解析xlsx格式的Excel文档（按行读取数据）
+    # 其实也可以按列读取数据，但是考虑到错位问题（整列的数据比较多），一旦某一行数据移位了，后面key值映射的数据也全乱了，而且由于是同种语言，很不容易发现错误
+    # 按行读取的话，每行数据块比较小，即使发生错位了，也很容易根据语言差异定位到错误的位置，所以这里采用按行读取Excel数据的方式
+    def parse_xlsx_file(self, xlsx_fname):
+        # 获取翻译文档所在的那张表（默认第一张表）
+        wb = load_workbook(xlsx_fname)
+        sheets = wb.sheetnames
+        sheet = wb.get_sheet_by_name(sheets[0])
+
+        # 获取语言列表
+        lang_col = []
+        for l in sheet["1"][1:]:  # 第1行
+            if l.value is not None:
+                lang_col.append(l.column)  # 语言列的索引
+                self.langls.append(l.value.encode("utf-8"))
+        # 修改语言描述
+        self.edit_language_desc()
+
+        # 逐行读取数据（从第二行到最后一列）
+        for i in range(2, sheet.max_row):
+            subls = []
+            row_str = sheet[str(i)]
+            if row_str[0].value:  # key不为空才进行处理
+                for r in row_str:
+                    # 将各国语言列下的数据添加到list中
+                    if r.column in lang_col:
+                        # 需要保留空数据，防止数据移位
+                        if r.value is None:
+                            info = ""
+                        else:
+                            info = r.value
+                        subls.append(info.encode("utf-8"))
+                self.infols.append({"key": row_str[0].value, "value": subls})
+
+    # 解析xls格式的文档（openpyxl不支持xls文档，这里用的是xlrd库，解析方式跟上面类似，因为接口有区别，所以分开写）
+    def parse_xls_file(self, xls_fname):
+        # 打开文件
+        wb = xlrd.open_workbook(xls_fname)
+        # 根据sheet索引或者名称获取sheet内容
+        sheet = wb.sheet_by_index(0)  # sheet索引从0开始
+        # 获取语言列表
+        lang_col = []
+        first_row = sheet.row(0)
+        for i in range(len(first_row)):  # 第1行
+            if i > 0 and first_row[i].value is not None:
+                lang_col.append(i)  # 语言列的索引
+                self.langls.append(first_row[i].value.encode("utf-8"))
+        # 修改语言描述
+        self.edit_language_desc()
+
+        # 逐行读取数据（从第二行到最后一行）
+        max_row = sheet.nrows
+        for i in range(1, max_row):
+            subls = []
+            row_str = sheet.row(i)
+            if row_str[0].value:  # key不为空才进行处理
+                for r in range(len(row_str)):
+                    if r in lang_col:
+                        # 将各国语言列下的数据添加到list中
+                        if row_str[r].value is None:
+                            info = ""
+                        else:
+                            info = row_str[r].value
+                        subls.append(info.encode("utf-8"))
+                self.infols.append({"key": row_str[0].value, "value": subls})
+
+    # 修改语言描述（可根据实际情况自定义）
+    def edit_language_desc(self):
         for i in range(len(self.langls)):
             if self.langls[i] == "中文":
                 self.langls[i] = "zh"
@@ -46,18 +128,8 @@ class I18NTranslator:
                 self.langls[i] = "ru"
             elif self.langls[i] == "西班牙语":
                 self.langls[i] = "es"
-
         for lang in self.langls:
             print("langls:{}".format(lang))
-
-        null_ls = []
-        # 对每一行的数据进行分割,将数据存入list(第一列为键,其他列为值)
-        for i in ls[1:]:
-            subls = i.split(ITEM_SEPARATOR)
-            if subls[0] != "-":
-                self.infols.append({"key": subls[0], "value": subls[1:]})
-            else:
-                null_ls.append({"key": subls[0], "value": subls[1:]})
 
     # 拼接字符生成xml文本(Android)
     def generate_xml(self, lang):
@@ -108,7 +180,7 @@ class I18NTranslator:
     # 按语言分别生成对应的翻译文本
     def build_translated_file(self, form):
         # 切换到脚本的路径
-        os.chdir(self.cur_dir)        
+        os.chdir(self.cur_dir)
         # 建立父文件夹,并切换到该目录下
         if form == OUTPUT_FORMAT_ANDROID:
             dir_path = os.path.join(self.cur_dir, OUTPUT_FORMAT_ANDROID)
@@ -148,7 +220,6 @@ class I18NTranslator:
             txtfd.write(text)
             txtfd.close()
 
-
 # 选择文件的图形界面
 class SelectFileDialog(Tkinter.Frame):
     def __init__(self, root):
@@ -157,11 +228,11 @@ class SelectFileDialog(Tkinter.Frame):
         # 定义文件操作的相关属性
         self.file_opt = options = {}
         options['parent'] = root
-        options['defaultextension'] = '.txt'  # 限制只能选择txt文本
-        options['filetypes'] = [('all files', '.*'), ('text files', '.txt')]  # 文本选择类型
         options['initialdir'] = '.'  # 默认当前目录
         options['initialfile'] = 'example.txt'  # 默认选中的文件
-        options['title'] = 'Please select a document'
+        options['title'] = 'Please select a document'  # 标题
+        # 限制可选择的文本类型
+        options['filetypes'] = [('All', '*.*'), ('Text', '*.txt'), ('Excel', ('*.xls', '*.xlsx'))]
 
         # 初始化窗口
         Tkinter.Frame.__init__(self, root)
@@ -207,7 +278,12 @@ class SelectFileDialog(Tkinter.Frame):
             opt_android = self.value_android.get() == 1
             if opt_ios or opt_android:
                 translator = I18NTranslator()
-                translator.parse_txt_file(self.file_path)
+                if self.file_path.endswith(".txt"):  # txt文本
+                    translator.parse_txt_file(self.file_path)
+                elif self.file_path.endswith(".xls"):  # xls格式文本
+                    translator.parse_xls_file(self.file_path)
+                elif self.file_path.endswith(".xlsx"):  # xlsx格式文本
+                    translator.parse_xlsx_file(self.file_path)
                 # 根据选择的格式进行输出
                 if opt_ios:
                     translator.build_translated_file(OUTPUT_FORMAT_IOS)
