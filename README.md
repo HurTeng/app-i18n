@@ -30,7 +30,7 @@ app的国际化处理脚本，可以将翻译文档一键转换成Android以及i
 ***translate_nolib.py***
 脚本不需要引入第三方库，但只支持txt文本，可以将Excel表格中的数据另存为txt文档，或者复制到文本编辑器中生成txt文档(不要使用Windows自带的记事本)，然后使用该脚本一键生成翻译文档
 
-***以上脚本适用于Python 2环境，暂未兼容Python 3（主要原因是Tkinter库的差异，可以修改Tkinter引用，或者直接去掉GUI界面，代码基本能跑通）***
+***以上脚本适用于Python 2环境，暂未兼容Python 3（主要原因是Tkinter库的差异，可以修改Tkinter引用，或者直接去掉GUI界面，代码基本能跑通）***
 
 ## TODO
 
